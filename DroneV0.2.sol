@@ -219,7 +219,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         }   
     }
 
-    function listItem(uint256 _tokenId,uint256 price) external 
+    function putNFTonSale(uint256 _tokenId,uint256 price) external 
       //  notListed(nftAddress, tokenId, msg.sender)
     {
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
@@ -233,7 +233,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         return s_listings[address(this)][tokenId];
     }
 
-    function cancelListing( uint256 _tokenId) external
+    function putNFTonNotForSale( uint256 _tokenId) external
       //   isNFTListed(_tokenId)
     {
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
