@@ -68,7 +68,13 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
 
      modifier isNFTListed(uint256 tokenId) {
         Listing memory listing = s_listings[address(this)][tokenId];
-        require (listing.price <= 0 ,"This Token is not listed yet");
+        require (listing.price > 0 ,"This Token is not listed yet");
+        _;
+    }
+
+    modifier notListed(uint256 tokenId,address owner) {
+        Listing memory listing = s_listings[address(this)][tokenId];
+        require (listing.price <= 0,"Token is already listed");
         _;
     }
 
@@ -220,7 +226,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     }
 
     function putNFTonSale(uint256 _tokenId,uint256 price) external 
-      //  notListed(nftAddress, tokenId, msg.sender)
+        notListed( _tokenId, msg.sender)
     {
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
         require(price > 0 ,"The price must be above zero");
@@ -234,7 +240,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     }
 
     function putNFTonNotForSale( uint256 _tokenId) external
-      //   isNFTListed(_tokenId)
+         isNFTListed(_tokenId)
     {
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
         delete (s_listings[address(this)][_tokenId]);
@@ -242,7 +248,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     }
 
     function buyItem( uint256 _tokenId)  payable external
-       // isNFTListed( _tokenId)
+        isNFTListed( _tokenId)
         
     {
         Listing memory listedItem = s_listings[address(this)][_tokenId];
@@ -254,11 +260,11 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     }
 
     function updateListing(uint256 _tokenId,uint256 newPrice) external
-     //   isNFTListed( _tokenId)
+        isNFTListed( _tokenId)
         nonReentrant
     {
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
-        require(newPrice == 0,"New price must be above than 0");
+        require(newPrice > 0,"New price must be above than 0");
 
         s_listings[address(this)][_tokenId].price = newPrice;
         emit ItemListed(msg.sender, address(this), _tokenId, newPrice);
@@ -278,10 +284,5 @@ For multiple Mint
 
 */
 }
-
-
-
-
-
 
 
