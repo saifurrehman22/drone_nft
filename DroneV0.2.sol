@@ -80,12 +80,6 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         _;
     }
 
-    modifier notListed(uint256 _tokenId,address _owner) {
-        Listing memory listing = listings[address(this)][_tokenId];
-        require (listing.price <= 0,"Token is already listed");
-        _;
-    }
-
     /**
      * @dev tokenURI is used to get TokenUri link.
      *
@@ -232,8 +226,9 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         uint256 _tokenId,
         uint256 _price) 
         external 
-        notListed( _tokenId, msg.sender)
     {
+        Listing memory listing = listings[address(this)][_tokenId];
+        require (listing.price <= 0,"Token is already listed");
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
         require(_price > 0 ,"The price must be above zero");
         listings[address(this)][_tokenId] = Listing(_price, msg.sender);
