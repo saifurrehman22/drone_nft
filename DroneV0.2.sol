@@ -7,29 +7,27 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 
 contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard 
 {
     using SafeMath for uint256;
     using ECDSA for bytes32;
+    using Counters for Counters.Counter;
+    Counters.Counter private _tokenIdCounter;
 
     string public baseUri = "https://gateway.pinata.cloud/ipfs/";
     bool public mintEnabled = false;
     uint public totalMinted = 0;
     uint public mintSupplyCount;
-    uint private ownerMintReserveCount;
-    uint private ownerMintCount;
-    uint private maxMintPerAddress;
     uint public whitelistAddressCount = 0;
-    uint public whitelistMintCount = 0;
-    uint private maxWhitelistCount = 0;
 
 
-    event ItemListed(address indexed seller,address indexed nftAddress,uint256 indexed tokenId,uint256 price);
-    event ItemCanceled(address indexed seller,address indexed nftAddress,uint256 indexed tokenId);
-    event ItemBought(address indexed buyer,address indexed nftAddress,uint256 indexed tokenId,uint256 price);    
+    event TokenListed(address indexed seller,address indexed nftAddress,uint256 indexed tokenId,uint256 price);
+    event CancelTokenList(address indexed seller,address indexed nftAddress,uint256 indexed tokenId);
+    event TokenBought(address indexed buyer,address indexed nftAddress,uint256 indexed tokenId,uint256 price);    
     
-    mapping(address => mapping(uint256 => Listing)) private s_listings;
+    mapping(address => mapping(uint256 => Listing)) private listings;
     mapping(address => uint16) private addressMintCount;
     mapping(address => bool) private whitelist;
 
@@ -47,18 +45,12 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     mapping(string => uint) private HashToTokenIds;
 
     constructor(
-        uint _mintSupplyCount,
-        uint _ownerMintReserveCount,
-        uint _maxWhitelistCount,
-        uint _maxMintPerAddress) ERC721("Drone", "TB2") {
+        uint _mintSupplyCount
+        ) ERC721("Drone", "TB2") {
 
-        require(_ownerMintReserveCount <= _mintSupplyCount);    
-        require(_maxMintPerAddress <= _mintSupplyCount);    
 
         mintSupplyCount = _mintSupplyCount;
-        ownerMintReserveCount = _ownerMintReserveCount;
-        maxWhitelistCount = _maxWhitelistCount;
-        maxMintPerAddress = _maxMintPerAddress;
+
     }
 
     modifier tokenExists(uint _tokenId) {
@@ -66,14 +58,14 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     _;
     }
 
-     modifier isNFTListed(uint256 tokenId) {
-        Listing memory listing = s_listings[address(this)][tokenId];
+     modifier isListed(uint256 tokenId) {
+        Listing memory listing = listings[address(this)][tokenId];
         require (listing.price > 0 ,"This Token is not listed yet");
         _;
     }
 
     modifier notListed(uint256 tokenId,address owner) {
-        Listing memory listing = s_listings[address(this)][tokenId];
+        Listing memory listing = listings[address(this)][tokenId];
         require (listing.price <= 0,"Token is already listed");
         _;
     }
@@ -101,17 +93,14 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         mintEnabled = _enabled;
     }
     
-    // Method to Add user into Whitelist
     function whitelistUser(address _user) public onlyOwner {
         require(!mintEnabled, "Whitelist is not available");
         require(!whitelist[_user], "Your address is already whitelisted");
-        require(whitelistAddressCount < maxWhitelistCount, "Whitelist is full");
 
         whitelistAddressCount++;
         whitelist[_user] = true;
     }
     
-    // Method to remove user into Whitelist
     function removeWhitelistUser(address _user) public onlyOwner {
         require(!mintEnabled, "Whitelist is not available");
         require(whitelistAddressCount > 0, "The Whitelist is empty");
@@ -119,170 +108,69 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         whitelistAddressCount--;
     }
 
-    // Security     
-    function verifyOwnerSignature(bytes32 hash, bytes memory signature) private view returns(bool) {
-        return hash.toEthSignedMessageHash().recover(signature) == owner();
-    }
+    function mint(string memory tokenMetadataHash) external nonReentrant {
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
 
-// bytes calldata _signature 
-
-    function mintSingle(MintData calldata _mintData) external nonReentrant {
-        //require(verifyOwnerSignature(keccak256(abi.encode(_mintData)), _signature), "Invalid Signature");
-        require(_mintData._tokenId >= 0 && _mintData._tokenId <= mintSupplyCount, "Invalid token id.");
+        require(tokenId >= 0 && tokenId <= mintSupplyCount, "Invalid token id.");
         require(mintEnabled, "Minting unavailable");
         require(totalMinted < mintSupplyCount, "All tokens minted");
-        require(bytes(_mintData._tokenMetadataHash).length > 0, "No hash or address provided");
+        require(bytes(tokenMetadataHash).length > 0, "No hash or address provided");
         require(whitelist[msg.sender] == true ,"This address is not WhiteListed");
 
 
-        if (_msgSender() != owner()) {
-        require(addressMintCount[_msgSender()] < maxMintPerAddress,"You cannot mint more.");
-        require(totalMinted + (ownerMintReserveCount - ownerMintCount) < mintSupplyCount,"Available tokens minted");
-
-        // remaining mints are enough to cover remaining whitelist.
-        require(
-            (
-                whitelist[_msgSender()] ||
-                (
-                totalMinted +
-                (ownerMintReserveCount - ownerMintCount) +
-                ((whitelistAddressCount - whitelistMintCount) * 2)
-                < mintSupplyCount
-                )
-            ),
-            "Only whitelist tokens available"
-            );
-        } 
-        else {
-            require(ownerMintCount < ownerMintReserveCount, "Owner mint limit");
-        }
-
-        tokenMetadataHashs[_mintData._tokenId] = _mintData._tokenMetadataHash;
-        HashToTokenIds[_mintData._tokenMetadataHash] = _mintData._tokenId;
+        tokenMetadataHashs[tokenId] = tokenMetadataHash;
+        HashToTokenIds[tokenMetadataHash] = tokenId;
 
         addressMintCount[_msgSender()]++;
         totalMinted++;
 
-        if (whitelist[_msgSender()]) {
-        whitelistMintCount++;
-        }
-
-        if (_msgSender() == owner()) {
-            ownerMintCount++;
-        }
-
-        _safeMint(_msgSender(), _mintData._tokenId);
+        _safeMint(_msgSender(), tokenId);
     }
 
-// bytes calldata _signature 
-
-    function mintmultiple( MintData[] calldata _mintData ) external nonReentrant {  
-        for (uint i =0 ; i < _mintData.length ; i++)
-        {  
-            //require(verifyOwnerSignature(keccak256(abi.encodePacked(_mintData)), _signature), "Invalid Signature");
-            require(_mintData[i]._tokenId >= 0 && _mintData[i]._tokenId <= mintSupplyCount, "Invalid token id.");
-            require(mintEnabled, "Minting unavailable");
-            require(totalMinted < mintSupplyCount, "All tokens minted");
-            require(bytes(_mintData[i]._tokenMetadataHash).length > 0, "No hash or address provided");
-
-            if (_msgSender() != owner()) {
-                require(addressMintCount[_msgSender()] < maxMintPerAddress, "You cannot mint more.");
-                require(totalMinted + (ownerMintReserveCount - ownerMintCount) < mintSupplyCount, "Available tokens minted");
-
-                // make sure remaining mints are enough to cover remaining whitelist.
-                require(
-                        (
-                            whitelist[_msgSender()] ||
-                            (
-                            totalMinted +
-                            (ownerMintReserveCount - ownerMintCount) +
-                            ((whitelistAddressCount - whitelistMintCount) * 2)
-                            < mintSupplyCount
-                            )
-                        ),
-                        "Only whitelist tokens available"
-                );
-            } 
-            else {
-                require(ownerMintCount < ownerMintReserveCount, "Owner mint limit");
-            }
-
-            tokenMetadataHashs[_mintData[i]._tokenId] = _mintData[i]._tokenMetadataHash;
-            HashToTokenIds[_mintData[i]._tokenMetadataHash] = _mintData[i]._tokenId;
-            
-            addressMintCount[_msgSender()]++;
-            totalMinted++;
-
-            if (whitelist[_msgSender()]) {
-            whitelistMintCount++;
-            }
-
-            if (_msgSender() == owner()) {
-                ownerMintCount++;
-            }
-
-            _safeMint(_msgSender(), _mintData[i]._tokenId);
-        }   
-    }
-
-    function putNFTonSale(uint256 _tokenId,uint256 price) external 
+    function listToken(uint256 _tokenId,uint256 price) external 
         notListed( _tokenId, msg.sender)
     {
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
         require(price > 0 ,"The price must be above zero");
-        s_listings[address(this)][_tokenId] = Listing(price, msg.sender);
-        emit ItemListed(msg.sender, address(this), _tokenId, price);
+        listings[address(this)][_tokenId] = Listing(price, msg.sender);
+        emit TokenListed(msg.sender, address(this), _tokenId, price);
     }
 
-    function getListing(uint256 tokenId)external view returns (Listing memory)
+    function getTokenListing(uint256 tokenId)external view returns (Listing memory)
     {
-        return s_listings[address(this)][tokenId];
+        return listings[address(this)][tokenId];
     }
 
-    function putNFTonNotForSale( uint256 _tokenId) external
-         isNFTListed(_tokenId)
+    function cancelTokenListing( uint256 _tokenId) external
+         isListed(_tokenId)
     {
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
-        delete (s_listings[address(this)][_tokenId]);
-        emit ItemCanceled(msg.sender, address(this), _tokenId);
+        delete (listings[address(this)][_tokenId]);
+        emit CancelTokenList(msg.sender, address(this), _tokenId);
     }
 
-    function buyItem( uint256 _tokenId)  payable external
-        isNFTListed( _tokenId)
+    function buyToken( uint256 _tokenId)  payable external
+        isListed( _tokenId)
         
     {
-        Listing memory listedItem = s_listings[address(this)][_tokenId];
+        Listing memory listedItem = listings[address(this)][_tokenId];
         require (msg.value >= listedItem.price , "You cant buy at lower price");
 
-         delete (s_listings[address(this)][_tokenId]);
+         delete (listings[address(this)][_tokenId]);
         _safeTransfer(listedItem.seller, msg.sender, _tokenId ,"");
-        emit ItemBought(msg.sender, address(this), _tokenId, listedItem.price);
+        emit TokenBought(msg.sender, address(this), _tokenId, listedItem.price);
     }
 
-    function updateListing(uint256 _tokenId,uint256 newPrice) external
-        isNFTListed( _tokenId)
+    function updateTokenListing(uint256 _tokenId,uint256 newPrice) external
+        isListed( _tokenId)
         nonReentrant
     {
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
         require(newPrice > 0,"New price must be above than 0");
 
-        s_listings[address(this)][_tokenId].price = newPrice;
-        emit ItemListed(msg.sender, address(this), _tokenId, newPrice);
+        listings[address(this)][_tokenId].price = newPrice;
+        emit TokenListed(msg.sender, address(this), _tokenId, newPrice);
     }
-    
-            
-/* 
-For single mint
-
-[1,"QmT757cQUpNSNaEyDYYv5No7GzRogF3bnTGYxRS98EMcwt"]
-[2,"QmT757cQUpNSNaEyDYYv5No7GzRogF3bnTGYxRS98EMcwt"]
-
-
-For multiple Mint
-
-[[1,"QmT757cQUpNSNaEyDYYv5No7GzRogF3bnTGYxRS98EMcwt"],[2,"QmT757cQUpNSNaEyDYYv5No7GzRogF3bnTGYxRS98EMcwt"]]
-
-*/
+               
 }
-
-
