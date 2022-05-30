@@ -35,18 +35,18 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
 
     event TokenListed(
         address indexed seller,
-        address indexed nftAddress,
+        address indexed tokenAddress,
         uint256 indexed tokenId,
         uint256 price);
 
     event CancelTokenList(
         address indexed seller,
-        address indexed nftAddress,
+        address indexed tokenAddress,
         uint256 indexed tokenId);
 
     event TokenBought(
         address indexed buyer,
-        address indexed nftAddress,
+        address indexed tokenAddress,
         uint256 indexed tokenId,
         uint256 price);  
 
