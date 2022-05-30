@@ -86,6 +86,14 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         _;
     }
 
+    /**
+     * @dev tokenURI is used to get TokenUri link.
+     *
+     * @param _tokenId - ID of Token
+     *
+     * @return string .
+     */
+
     function tokenURI(uint _tokenId) 
     override
     public 
@@ -111,6 +119,15 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         emit SetBaseURI(_baseUri, msg.sender);
     }
 
+    /**
+     * @dev updateMetadataHash is used to update the metadata of a token.
+     * Requirement:
+     * - This function can only called by owner of the token
+
+     * @param _tokenId - Token Id 
+     * @param _tokenMetadataHash - New Metadata
+     */
+
     function updateMetadataHash(
         uint _tokenId, 
         string calldata _tokenMetadataHash) 
@@ -121,6 +138,14 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         tokenMetadataHashs[_tokenId] = _tokenMetadataHash;
         HashToTokenIds[_tokenMetadataHash] = _tokenId;
     }
+
+    /**
+     * @dev setMintEnabled is used to start minitng  of a tokens.
+     * Requirement:
+     * - This function can only called by owner of the Contract
+
+     * @param _enabled - Token Id 
+     */
     
     function setMintEnabled(bool _enabled) 
     external 
@@ -169,7 +194,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     /**
      * @dev mint is used to create a new token.
      * Requirement:     
-     
+
      * @param _tokenMetadataHash - token metadata 
      */
 
@@ -214,6 +239,14 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         listings[address(this)][_tokenId] = Listing(_price, msg.sender);
         emit TokenListed(msg.sender, address(this), _tokenId, _price);
     }
+
+    /**
+     * @dev getTokenListing is used to get information of listing token.
+     *
+     * @param _tokenId - ID of Token
+     *
+     * @return listing Tuple.
+     */
 
     function getTokenListing(uint256 _tokenId)
     external 
@@ -286,5 +319,3 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         emit TokenListed(msg.sender, address(this), _tokenId, _newPrice);
     }              
 }
-
-
