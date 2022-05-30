@@ -126,7 +126,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
 
 // bytes calldata _signature 
 
-    function mintSingleLand(MintData calldata _mintData) external nonReentrant {
+    function mintSingle(MintData calldata _mintData) external nonReentrant {
         //require(verifyOwnerSignature(keccak256(abi.encode(_mintData)), _signature), "Invalid Signature");
         require(_mintData._tokenId >= 0 && _mintData._tokenId <= mintSupplyCount, "Invalid token id.");
         require(mintEnabled, "Minting unavailable");
@@ -176,7 +176,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
 
 // bytes calldata _signature 
 
-    function mintmultipleLand( MintData[] calldata _mintData ) external nonReentrant {  
+    function mintmultiple( MintData[] calldata _mintData ) external nonReentrant {  
         for (uint i =0 ; i < _mintData.length ; i++)
         {  
             //require(verifyOwnerSignature(keccak256(abi.encodePacked(_mintData)), _signature), "Invalid Signature");
