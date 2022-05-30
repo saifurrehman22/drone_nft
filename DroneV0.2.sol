@@ -21,31 +21,52 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     uint public totalMinted = 0;
     uint public mintSupplyCount;
     uint public whitelistAddressCount = 0;
-
-
-    event TokenListed(address indexed seller,address indexed nftAddress,uint256 indexed tokenId,uint256 price);
-    event CancelTokenList(address indexed seller,address indexed nftAddress,uint256 indexed tokenId);
-    event TokenBought(address indexed buyer,address indexed nftAddress,uint256 indexed tokenId,uint256 price);    
     
     mapping(address => mapping(uint256 => Listing)) private listings;
     mapping(address => uint16) private addressMintCount;
     mapping(address => bool) private whitelist;
+    mapping(uint => string) public tokenMetadataHashs;
+    mapping(string => uint) private HashToTokenIds;
 
     struct Listing {
         uint256 price;
         address seller;
     }
 
-    mapping(uint => string) public tokenMetadataHashs;
-    mapping(string => uint) private HashToTokenIds;
+    event TokenListed(
+        address indexed seller,
+        address indexed nftAddress,
+        uint256 indexed tokenId,
+        uint256 price);
 
-    constructor(
-        uint _mintSupplyCount
-        ) ERC721("Drone", "TB2") {
+    event CancelTokenList(
+        address indexed seller,
+        address indexed nftAddress,
+        uint256 indexed tokenId);
 
+    event TokenBought(
+        address indexed buyer,
+        address indexed nftAddress,
+        uint256 indexed tokenId,
+        uint256 price);  
 
+    event AddedWhitelistAddress(
+        address whitelistedAddress,
+        address addedBy
+    );
+
+    event RemovedWhitelistAddress(
+        address whitelistedAddress,
+        address addedBy
+    );
+
+    event SetBaseURI(
+        string baseURI,
+        address addedBy
+    );
+
+    constructor(uint _mintSupplyCount) ERC721("Drone", "TB2") {
         mintSupplyCount = _mintSupplyCount;
-
     }
 
     modifier tokenExists(uint _tokenId) {
@@ -65,45 +86,98 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         _;
     }
 
-    function tokenURI(uint _tokenId) override public view returns (string memory) 
+    function tokenURI(uint _tokenId) 
+    override
+    public 
+    view 
+    returns (string memory) 
     {
         require(_exists(_tokenId), "ERC721Metadata: URI query for nonexistent token");
-
         return string(abi.encodePacked(baseUri,tokenMetadataHashs[_tokenId]));      
     }
-    
-    function setBaseUri(string memory _baseUri) external onlyOwner {
+
+    /**
+     * @dev setBaseUri is used to set BaseURI.
+     *
+     * Requirement:
+     *
+     * - This function can only called by owner of contract
+     *
+     * @param _baseUri - New baseURI
+     *
+     * Emits a {UpdatedBaseURI} event.
+     */
+
+    function setBaseUri(string memory _baseUri) 
+    external onlyOwner {
         baseUri = _baseUri;
+        emit SetBaseURI(_baseUri, msg.sender);
     }
 
-    function updateMetadataHash(uint _tokenId, string calldata _tokenMetadataHash) tokenExists(_tokenId) external {
+    function updateMetadataHash(
+        uint _tokenId, 
+        string calldata _tokenMetadataHash) 
+        tokenExists(_tokenId) 
+        external {
         require(_msgSender() == ownerOf(_tokenId), "You are not the owner of this token.");
         require(HashToTokenIds[_tokenMetadataHash] == 0, "This hash has already been assigned.");
-
         tokenMetadataHashs[_tokenId] = _tokenMetadataHash;
         HashToTokenIds[_tokenMetadataHash] = _tokenId;
     }
     
-    function setMintEnabled(bool _enabled) external onlyOwner {
+    function setMintEnabled(bool _enabled) 
+    external 
+    onlyOwner {
         mintEnabled = _enabled;
     }
     
-    function whitelistUser(address _user) public onlyOwner {
-        require(!mintEnabled, "Whitelist is not available");
-        require(!whitelist[_user], "Your address is already whitelisted");
+    /**
+     * @dev addWhitelistedAddress is used to add address in whitelist mapping.
+     *
+     * Requirement:
+     *
+     * - This function can only called by owner of contract
+     *
+     * @param _whitelistAddress - New whitelist address
+     *
+     * Emits a {AddedWhitelistAddress} event.
+     */
 
+    function whitelistUser(address _whitelistAddress) 
+    public 
+    onlyOwner {
+        require(!mintEnabled, "Whitelist is not available");
+        require(!whitelist[_whitelistAddress], "Your address is already whitelisted");
         whitelistAddressCount++;
-        whitelist[_user] = true;
+        whitelist[_whitelistAddress] = true;
+        emit AddedWhitelistAddress(_whitelistAddress, msg.sender);
     }
+
+    /**
+     * @dev removeWhitelistedAddress is used to remove address from whitelist mapping.
+     *
+     * Requirement:
+     *
+     * - This function can only called by owner of contract
+     *
+     * @param _whitelistAddress - Remove whitelist address
+     *
+     * Emits a {RemovedWhitelistAddress} event.
+     */
     
-    function removeWhitelistUser(address _user) public onlyOwner {
+    function removeWhitelistUser(address _whitelistAddress) 
+    public 
+    onlyOwner {
         require(!mintEnabled, "Whitelist is not available");
         require(whitelistAddressCount > 0, "The Whitelist is empty");
-        whitelist[_user] = false;
+        whitelist[_whitelistAddress] = false;
         whitelistAddressCount--;
+        emit RemovedWhitelistAddress(_whitelistAddress, msg.sender);
     }
 
-    function mint(string memory _tokenMetadataHash) external nonReentrant {
+    function mint(string memory _tokenMetadataHash) 
+    external 
+    nonReentrant {
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
 
@@ -113,17 +187,18 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         require(bytes(_tokenMetadataHash).length > 0, "No hash or address provided");
         require(whitelist[msg.sender] == true ,"This address is not WhiteListed");
 
-
         tokenMetadataHashs[tokenId] = _tokenMetadataHash;
         HashToTokenIds[_tokenMetadataHash] = tokenId;
-
         addressMintCount[_msgSender()]++;
         totalMinted++;
 
         _safeMint(_msgSender(), tokenId);
     }
 
-    function listToken(uint256 _tokenId,uint256 _price) external 
+    function listToken(
+        uint256 _tokenId,
+        uint256 _price) 
+        external 
         notListed( _tokenId, msg.sender)
     {
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
@@ -132,22 +207,27 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         emit TokenListed(msg.sender, address(this), _tokenId, _price);
     }
 
-    function getTokenListing(uint256 _tokenId)external view returns (Listing memory)
+    function getTokenListing(uint256 _tokenId)
+    external 
+    view 
+    returns (Listing memory)
     {
         return listings[address(this)][_tokenId];
     }
 
-    function cancelTokenListing( uint256 _tokenId) external
-         isListed(_tokenId)
+    function cancelTokenListing(uint256 _tokenId) 
+    external
+    isListed(_tokenId)
     {
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
         delete (listings[address(this)][_tokenId]);
         emit CancelTokenList(msg.sender, address(this), _tokenId);
     }
 
-    function buyToken( uint256 _tokenId)  payable external
-        isListed( _tokenId)
-        
+    function buyToken(uint256 _tokenId)  
+    payable 
+    external
+    isListed( _tokenId)      
     {
         Listing memory listedItem = listings[address(this)][_tokenId];
         require (msg.value >= listedItem.price , "You cant buy at lower price");
@@ -157,15 +237,17 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         emit TokenBought(msg.sender, address(this), _tokenId, listedItem.price);
     }
 
-    function updateTokenListing(uint256 _tokenId,uint256 _newPrice) external
-        isListed( _tokenId)
-        nonReentrant
+    function updateTokenListing(
+        uint256 _tokenId,
+        uint256 _newPrice) 
+    external
+    isListed( _tokenId)
+    nonReentrant
     {
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
         require(_newPrice > 0,"New price must be above than 0");
-
         listings[address(this)][_tokenId].price = _newPrice;
         emit TokenListed(msg.sender, address(this), _tokenId, _newPrice);
-    }
-               
+    }              
 }
+
