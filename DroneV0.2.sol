@@ -65,6 +65,12 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         address addedBy
     );
 
+    event UpdateMetadata(
+        uint tokenId,
+        string newHash,
+        address updatedBy
+    );
+
     constructor(uint _mintSupplyCount) ERC721("Drone", "TB2") {
         mintSupplyCount = _mintSupplyCount;
     }
@@ -120,6 +126,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
 
      * @param _tokenId - Token Id 
      * @param _tokenMetadataHash - New Metadata
+     * Emits a {UpdateMetadata} event.
      */
 
     function updateMetadataHash(
@@ -131,6 +138,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         require(HashToTokenIds[_tokenMetadataHash] == 0, "This hash has already been assigned.");
         tokenMetadataHashs[_tokenId] = _tokenMetadataHash;
         HashToTokenIds[_tokenMetadataHash] = _tokenId;
+        emit UpdateMetadata(_tokenId,_tokenMetadataHash,msg.sender);
     }
 
     /**
@@ -269,7 +277,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         emit CancelTokenList(msg.sender, address(this), _tokenId);
     }
 
-        /**
+    /**
      * @dev buyToken is used to buy token which user has listed.
      * Requirement:
      * - This function can only called by anyone who wants to purchase token
