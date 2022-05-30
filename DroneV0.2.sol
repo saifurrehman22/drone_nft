@@ -53,14 +53,14 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     _;
     }
 
-     modifier isListed(uint256 tokenId) {
-        Listing memory listing = listings[address(this)][tokenId];
+     modifier isListed(uint256 _tokenId) {
+        Listing memory listing = listings[address(this)][_tokenId];
         require (listing.price > 0 ,"This Token is not listed yet");
         _;
     }
 
-    modifier notListed(uint256 tokenId,address owner) {
-        Listing memory listing = listings[address(this)][tokenId];
+    modifier notListed(uint256 _tokenId,address _owner) {
+        Listing memory listing = listings[address(this)][_tokenId];
         require (listing.price <= 0,"Token is already listed");
         _;
     }
@@ -103,19 +103,19 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         whitelistAddressCount--;
     }
 
-    function mint(string memory tokenMetadataHash) external nonReentrant {
+    function mint(string memory _tokenMetadataHash) external nonReentrant {
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
 
         require(tokenId >= 0 && tokenId <= mintSupplyCount, "Invalid token id.");
         require(mintEnabled, "Minting unavailable");
         require(totalMinted < mintSupplyCount, "All tokens minted");
-        require(bytes(tokenMetadataHash).length > 0, "No hash or address provided");
+        require(bytes(_tokenMetadataHash).length > 0, "No hash or address provided");
         require(whitelist[msg.sender] == true ,"This address is not WhiteListed");
 
 
-        tokenMetadataHashs[tokenId] = tokenMetadataHash;
-        HashToTokenIds[tokenMetadataHash] = tokenId;
+        tokenMetadataHashs[tokenId] = _tokenMetadataHash;
+        HashToTokenIds[_tokenMetadataHash] = tokenId;
 
         addressMintCount[_msgSender()]++;
         totalMinted++;
@@ -123,18 +123,18 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         _safeMint(_msgSender(), tokenId);
     }
 
-    function listToken(uint256 _tokenId,uint256 price) external 
+    function listToken(uint256 _tokenId,uint256 _price) external 
         notListed( _tokenId, msg.sender)
     {
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
-        require(price > 0 ,"The price must be above zero");
-        listings[address(this)][_tokenId] = Listing(price, msg.sender);
-        emit TokenListed(msg.sender, address(this), _tokenId, price);
+        require(_price > 0 ,"The price must be above zero");
+        listings[address(this)][_tokenId] = Listing(_price, msg.sender);
+        emit TokenListed(msg.sender, address(this), _tokenId, _price);
     }
 
-    function getTokenListing(uint256 tokenId)external view returns (Listing memory)
+    function getTokenListing(uint256 _tokenId)external view returns (Listing memory)
     {
-        return listings[address(this)][tokenId];
+        return listings[address(this)][_tokenId];
     }
 
     function cancelTokenListing( uint256 _tokenId) external
@@ -157,15 +157,15 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         emit TokenBought(msg.sender, address(this), _tokenId, listedItem.price);
     }
 
-    function updateTokenListing(uint256 _tokenId,uint256 newPrice) external
+    function updateTokenListing(uint256 _tokenId,uint256 _newPrice) external
         isListed( _tokenId)
         nonReentrant
     {
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
-        require(newPrice > 0,"New price must be above than 0");
+        require(_newPrice > 0,"New price must be above than 0");
 
-        listings[address(this)][_tokenId].price = newPrice;
-        emit TokenListed(msg.sender, address(this), _tokenId, newPrice);
+        listings[address(this)][_tokenId].price = _newPrice;
+        emit TokenListed(msg.sender, address(this), _tokenId, _newPrice);
     }
                
 }
