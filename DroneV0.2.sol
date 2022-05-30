@@ -36,11 +36,6 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         address seller;
     }
 
-    struct MintData {
-        uint _tokenId;
-        string _tokenMetadataHash;
-    }
-
     mapping(uint => string) public tokenMetadataHashs;
     mapping(string => uint) private HashToTokenIds;
 
