@@ -98,13 +98,10 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
 
     /**
      * @dev setBaseUri is used to set BaseURI.
-     *
      * Requirement:
-     *
      * - This function can only called by owner of contract
      *
      * @param _baseUri - New baseURI
-     *
      * Emits a {UpdatedBaseURI} event.
      */
 
@@ -133,13 +130,10 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     
     /**
      * @dev addWhitelistedAddress is used to add address in whitelist mapping.
-     *
      * Requirement:
-     *
      * - This function can only called by owner of contract
      *
      * @param _whitelistAddress - New whitelist address
-     *
      * Emits a {AddedWhitelistAddress} event.
      */
 
@@ -155,13 +149,10 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
 
     /**
      * @dev removeWhitelistedAddress is used to remove address from whitelist mapping.
-     *
      * Requirement:
-     *
      * - This function can only called by owner of contract
      *
      * @param _whitelistAddress - Remove whitelist address
-     *
      * Emits a {RemovedWhitelistAddress} event.
      */
     
@@ -177,9 +168,8 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
 
     /**
      * @dev mint is used to create a new token.
-     *
-     * Requirement:
-     *
+     * Requirement:     
+     
      * @param _tokenMetadataHash - token metadata 
      */
 
@@ -205,14 +195,11 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
 
     /**
      * @dev listToken is used to list a new token.
-     *
      * Requirement:
-     *
      * - This function can only called by owner of the token
      *
      * @param _tokenId - Token Id 
      * @param _price - Price of the Token
-     *
      * Emits a {TokenListed} event when player address is new.
      */
 
@@ -238,9 +225,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
 
     /**
      * @dev cancelTokenListing is used to remove token from listng.
-     *
      * Requirement:
-     *
      * - This function can only called by owner of the token
      *
      * @param _tokenId - Token Id 
@@ -258,9 +243,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
 
         /**
      * @dev buyToken is used to buy token which user has listed.
-     *
      * Requirement:
-     *
      * - This function can only called by anyone who wants to purchase token
      *
      * @param _tokenId - Token Id 
@@ -282,14 +265,11 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
 
     /**
      * @dev updateTokenListing is used to update the price of a token.
-     *
      * Requirement:
-     *
      * - This function can only called by owner of the token
-     *
+
      * @param _tokenId - Token Id 
      * @param _newPrice - Price of the Token
-     *
      * Emits a {TokenListed} event when player address is new.
      */
 
