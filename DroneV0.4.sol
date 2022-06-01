@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.14;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
@@ -7,6 +7,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+error PriceNotMet(uint256 tokenId, uint256 price);
+error PriceMustBeAboveZero();
 
 contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard 
 {
@@ -19,7 +22,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     uint public totalMinted;
     uint public mintSupplyCount;
     
-    mapping(uint256 => Listing) private listings;
+    mapping(uint256 => Listing) public listings;
     mapping(address => uint16) private addressMintCount;
     mapping(uint => string) public tokenMetadataHashs;
     mapping (address => bool) public whitelistAdmins;
@@ -198,8 +201,9 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         uint256 _price) 
         external 
     {
-        Listing memory listing = listings[_tokenId];
-        require (listing.price <= 0,"Token is already listed");
+        if (_price <= 0) {
+            revert PriceMustBeAboveZero();
+        }        
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
         require(_price > 0 ,"The price must be above zero");
         listings[_tokenId] = Listing(_price, msg.sender,true);
@@ -255,8 +259,9 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     isListed(_tokenId)      
     {
         Listing memory listedItem = listings[_tokenId];
-        require (msg.value >= listedItem.price , "You cant buy at lower price");
-
+        if (msg.value < listedItem.price) {
+            revert PriceNotMet(_tokenId, listedItem.price);
+        }
          delete (listings[_tokenId]);
         _safeTransfer(listedItem.seller, msg.sender, _tokenId ,"");
         emit TokenBought(msg.sender, address(this), _tokenId, listedItem.price);
@@ -280,37 +285,56 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     nonReentrant
     {
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
-        require(_newPrice > 0,"New price must be above than 0");
+        if (_newPrice == 0) {
+            revert PriceMustBeAboveZero();
+        }        
         listings[_tokenId].price = _newPrice;
         emit UpdatedToken(msg.sender, address(this), _tokenId, _newPrice);
     }
 
+    /**
+     * @dev whitelistAdmin is used to whitelsit admin account.
+     * Requirement:
+     * - This function can only called by owner of the contract
+
+     * @param _account - Account to be whitelisted 
+     * Emits a {WhitelistAdmin} event when player address is new.
+     */
+
     function whitelistAdmin(address _account) 
     external 
-    onlyOwner 
-    returns (string memory) {
+    onlyOwner {
         whitelistAdmins[_account] = true;
-        emit WhitelistAdmin(_account, msg.sender);
-        return "The admin is whitelsited";     
+        emit WhitelistAdmin(_account, msg.sender);     
     }
+
+    /**
+     * @dev removeWhitelistAdmin is used to whitelsit admin account.
+     * Requirement:
+     * - This function can only called by owner of the contract
+
+     * @param _account - Account to be whitelisted 
+     * Emits a {RemovedWhitelistAdmin} event when player address is new.
+     */
 
     function removeWhitelistAdmin(address _account) 
     external 
-    onlyOwner 
-    returns (string memory) {
+    onlyOwner {
         delete (whitelistAdmins[_account]);
         emit RemovedWhitelistAdmin(_account, msg.sender);
-        return "The Whitelist admin is removed";
     }
-  
+
     //Get Total Owner Address
 
-    function GetTotalNftAddress()public view returns (address[] memory)
+    function GetTotalNft(address _address)
+    public 
+    view 
+    returns (uint[] memory)
     {
-        address[] memory tokenIds = new address[](totalSupply());
+        uint[] memory tokenIds = new uint[](totalSupply());
         for (uint256 i=0; i < totalSupply(); i++) {
-        tokenIds[i] = ownerOf(i);
+        tokenIds[i] = balanceOf(_address);
         }
         return tokenIds;
-    }
+    } 
 }
