@@ -18,6 +18,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     error MintDisable();
     error NotWhitelistedAdmin();
     error AllTokkensMinted();
+    error TokenNotExit();
 
     using SafeMath for uint256;
     using ECDSA for bytes32;
@@ -116,7 +117,9 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     view 
     returns (string memory) 
     {
-        require(_exists(_tokenId), "ERC721Metadata: URI query for nonexistent token");
+        if (!_exists(_tokenId)) {
+            revert TokenNotExit();
+        }
         return string(abi.encodePacked(baseUri,tokenMetadataHashs[_tokenId]));      
     }
 
