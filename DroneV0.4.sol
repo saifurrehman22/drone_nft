@@ -17,6 +17,7 @@ contract Drone1 is ERC721Enumerable, Ownable, ReentrancyGuard
     error NotWhitelistedAdmin();
     error AllTokkensMinted();
     error TokenNotExit();
+    error OwnerCantBuy();
 
     uint public tokenId;
     uint public mintSupplyLimit;
@@ -90,8 +91,16 @@ contract Drone1 is ERC721Enumerable, Ownable, ReentrancyGuard
     }
 
     modifier isOwner(uint256 _tokenId,address _spender) {
+        
         if (ownerOf(_tokenId) != msg.sender) {
             revert NotOwner();
+        }
+        _;
+    }
+
+    modifier OwnerOfToken(uint256 _tokenId,address _spender) {
+        if (ownerOf(_tokenId) == msg.sender) {
+            revert OwnerCantBuy();
         }
         _;
     }
@@ -266,10 +275,11 @@ contract Drone1 is ERC721Enumerable, Ownable, ReentrancyGuard
     function buyToken(uint256 _tokenId)  
     payable 
     external
-    isListed(_tokenId)      
+    isListed(_tokenId)    
+    OwnerOfToken(_tokenId,msg.sender)  
     {
         Drone memory listedItem = drones[_tokenId];
-        if (msg.value < listedItem.price) {
+        if (msg.value != listedItem.price) {
             revert PriceNotMet(_tokenId, listedItem.price);
         }
          delete (drones[_tokenId]);
