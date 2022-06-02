@@ -194,15 +194,15 @@ contract DroneContract is ERC721Enumerable, Ownable, ReentrancyGuard
      * Requirement:
      * - This function can only called by owner of the Contract
 
-     * @param status - drone Id 
+     * @param _status - status of drone Id 
      */
     
-    function updateMintStatus(bool status) 
+    function updateMintStatus(bool _status) 
     external 
     onlyOwner {
-        mintEnabled = status;
+        mintEnabled = _status;
 
-        emit MintStatusUpdated(status, msg.sender);
+        emit MintStatusUpdated(_status, msg.sender);
     }
     
     /**
@@ -398,4 +398,3 @@ contract DroneContract is ERC721Enumerable, Ownable, ReentrancyGuard
     return items;
     }
 }
-
