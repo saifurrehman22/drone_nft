@@ -90,7 +90,6 @@ contract Drone1 is ERC721Enumerable, Ownable, ReentrancyGuard
     }
 
     modifier isOwner(uint256 _tokenId,address _spender) {
-        
         if (ownerOf(_tokenId) != msg.sender) {
             revert NotOwner();
         }
