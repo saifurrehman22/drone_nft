@@ -18,11 +18,10 @@ contract Drone1 is ERC721Enumerable, Ownable, ReentrancyGuard
     error AllTokkensMinted();
     error TokenNotExit();
 
-    uint tokenId;
-    uint public totalMinted;
-    uint public mintSupplyCount;
-    string public baseUri;
+    uint public tokenId;
+    uint public mintSupplyLimit;
     bool public mintEnabled;
+    string public baseUri;
     
     mapping(uint256 => Drone) public drones;
     mapping (address => bool) public whitelistAdmins;
@@ -32,11 +31,6 @@ contract Drone1 is ERC721Enumerable, Ownable, ReentrancyGuard
         address seller;
         bool listedOnSale;
         string tokenMetadataHashs;
-    }
-
-    struct returnDrone {
-        uint256 price;
-        address seller;
     }
 
     event TokenListedForSale(
@@ -79,8 +73,8 @@ contract Drone1 is ERC721Enumerable, Ownable, ReentrancyGuard
         address updatedBy
     );
 
-    constructor(uint _mintSupplyCount) ERC721("Drone", "TB2") {
-        mintSupplyCount = _mintSupplyCount;
+    constructor(uint _mintSupplyLimit) ERC721("Drone", "TB2") {
+        mintSupplyLimit = _mintSupplyLimit;
         mintEnabled =false;
         baseUri = "https://gateway.pinata.cloud/ipfs/";
     }
@@ -96,8 +90,8 @@ contract Drone1 is ERC721Enumerable, Ownable, ReentrancyGuard
     }
 
     modifier isOwner(uint256 _tokenId,address _spender) {
-        address owner = ownerOf(_tokenId);
-        if (_spender != owner) {
+        
+        if (ownerOf(_tokenId) != msg.sender) {
             revert NotOwner();
         }
         _;
@@ -186,13 +180,13 @@ contract Drone1 is ERC721Enumerable, Ownable, ReentrancyGuard
         if (bytes(_tokenMetadataHash).length != 46) {
             revert InvalidMetadataHash();
         }
-        if (_tokenId < 0 && _tokenId > mintSupplyCount) {
+        if (_tokenId < 0 && _tokenId > mintSupplyLimit) {
             revert InvalidTokenId();
         }
         if (!mintEnabled) {
             revert MintDisable();
         }
-        if (totalMinted >= mintSupplyCount) {
+        if (totalSupply() >= mintSupplyLimit) {
             revert AllTokkensMinted();
         }
         if (!whitelistAdmins[msg.sender]) {
@@ -200,7 +194,6 @@ contract Drone1 is ERC721Enumerable, Ownable, ReentrancyGuard
         }
 
         drones[_tokenId]=Drone(drones[_tokenId].price,drones[_tokenId].seller,drones[_tokenId].listedOnSale,_tokenMetadataHash);
-        totalMinted++;
 
         _safeMint(msg.sender, _tokenId);
     }
@@ -342,14 +335,13 @@ contract Drone1 is ERC721Enumerable, Ownable, ReentrancyGuard
         emit RemovedWhitelistAdmin(_account, msg.sender);
     }
  
-    function getOwnedNfts() 
+    function getAllDrones() 
     public 
     view 
-    returns(returnDrone[] memory){
-        returnDrone[] memory items= new returnDrone[](totalSupply());
+    returns(Drone[] memory){
+        Drone[] memory items= new Drone[](totalSupply());
         for (uint i=0; i<totalSupply(); i++){
-            items[i].seller=drones[i].seller;
-            items[i].price=drones[i].price;
+            items[i]=drones[i];
         }
     return items;
     }
