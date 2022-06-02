@@ -37,21 +37,25 @@ contract Drone1 is ERC721Enumerable, Ownable, ReentrancyGuard
     event TokenListedForSale(
         uint256 tokenId,
         address seller,
-        uint256 price);
+        uint256 price
+    );
 
     event CancelTokenForListing(
         uint256 tokenId,
-        address seller);
+        address seller
+    );
 
     event TokenBought(
         uint256 tokenId,
         address buyer,
-        uint256 price);  
+        uint256 price
+    );  
 
     event UpdatedTokenOnSale(
         uint256 tokenId,
         address seller,
-        uint256 price);
+        uint256 price
+    );
 
     event WhitelistAdmin(
         address whitelistedAddress,
