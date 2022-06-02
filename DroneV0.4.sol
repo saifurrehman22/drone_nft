@@ -12,44 +12,44 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
 {
     error PriceNotMet(uint256 tokenId, uint256 price);
     error PriceMustBeAboveZero();
+    error NotOwner();
 
     using SafeMath for uint256;
     using ECDSA for bytes32;
     uint tokenIdCounter;
 
-    string public baseUri = "https://gateway.pinata.cloud/ipfs/";
+    string public baseUri;
     bool public mintEnabled;
     uint public totalMinted;
     uint public mintSupplyCount;
     
     mapping(uint256 => Listing) public listings;
-    mapping(address => uint16) private addressMintCount;
     mapping(uint => string) public tokenMetadataHashs;
     mapping (address => bool) public whitelistAdmins;
 
     struct Listing {
         uint256 price;
         address seller;
-        bool listed;
+        bool listedOnSale;
     }
 
     event TokenListedForSale(
-        address  seller,
-        uint256  tokenId,
+        uint256 tokenId,
+        address seller,
         uint256 price);
 
     event CancelTokenForListing(
-        address  seller,
-        uint256  tokenId);
+        uint256 tokenId,
+        address seller);
 
     event TokenBought(
-        address  buyer,
-        uint256  tokenId,
+        uint256 tokenId,
+        address buyer,
         uint256 price);  
 
     event UpdatedTokenOnSale(
-        address  seller,
-        uint256  tokenId,
+        uint256 tokenId,
+        address seller,
         uint256 price);
 
     event WhitelistAdmin(
@@ -76,6 +76,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     constructor(uint _mintSupplyCount) ERC721("Drone", "TB2") {
         mintSupplyCount = _mintSupplyCount;
         mintEnabled =false;
+        baseUri = "https://gateway.pinata.cloud/ipfs/";
     }
 
     modifier tokenExists(uint _tokenId) {
@@ -85,7 +86,15 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
 
      modifier isListed(uint256 _tokenId) {
         Listing memory listing = listings[_tokenId];
-        require (listing.listed ,"This Token is not listed yet");
+        require (listing.listedOnSale ,"This Token is not listed yet");
+        _;
+    }
+
+    modifier isOwner(uint256 _tokenId,address _spender) {
+        address owner = ownerOf(_tokenId);
+        if (_spender != owner) {
+            revert NotOwner();
+        }
         _;
     }
 
@@ -136,8 +145,8 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         uint _tokenId, 
         string calldata _tokenMetadataHash) 
         tokenExists(_tokenId) 
+        isOwner(_tokenId, msg.sender)
         external {
-        require(msg.sender == ownerOf(_tokenId), "You are not the owner of this token.");
         tokenMetadataHashs[_tokenId] = _tokenMetadataHash;
         emit UpdateMetadata(_tokenId,_tokenMetadataHash,msg.sender);
     }
@@ -176,7 +185,6 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         require (whitelistAdmins[msg.sender], "You dont have access to whitelist" );
 
         tokenMetadataHashs[tokenId] = _tokenMetadataHash;
-        addressMintCount[msg.sender]++;
         totalMinted++;
 
         _safeMint(msg.sender, tokenId);
@@ -195,15 +203,14 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     function listToken(
         uint256 _tokenId,
         uint256 _price) 
-        external 
+        external
+        isOwner(_tokenId, msg.sender) 
     {
         if (_price <= 0) {
             revert PriceMustBeAboveZero();
         }        
-        require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
-        require(_price > 0 ,"The price must be above zero");
         listings[_tokenId] = Listing(_price, msg.sender,true);
-        emit TokenListedForSale(msg.sender,_tokenId, _price);
+        emit TokenListedForSale(_tokenId,msg.sender,_price);
     }
 
     /**
@@ -234,10 +241,10 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     function cancelTokenListing(uint256 _tokenId) 
     external
     isListed(_tokenId)
+    isOwner(_tokenId, msg.sender)
     {
-        require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
         delete (listings[_tokenId]);
-        emit CancelTokenForListing(msg.sender,_tokenId);
+        emit CancelTokenForListing(_tokenId,msg.sender);
     }
 
     /**
@@ -260,7 +267,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         }
          delete (listings[_tokenId]);
         _safeTransfer(listedItem.seller, msg.sender, _tokenId ,"");
-        emit TokenBought(msg.sender,_tokenId, listedItem.price);
+        emit TokenBought(_tokenId,msg.sender,listedItem.price);
     }
 
     /**
@@ -278,14 +285,14 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         uint256 _newPrice) 
     external
     isListed( _tokenId)
+    isOwner(_tokenId, msg.sender)
     nonReentrant
     {
-        require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
         if (_newPrice == 0) {
             revert PriceMustBeAboveZero();
         }        
         listings[_tokenId].price = _newPrice;
-        emit UpdatedTokenOnSale(msg.sender,_tokenId, _newPrice);
+        emit UpdatedTokenOnSale(_tokenId,msg.sender,_newPrice);
     }
 
     /**
