@@ -4,11 +4,9 @@ pragma solidity ^0.8.14;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard 
+contract Drone1 is ERC721Enumerable, Ownable, ReentrancyGuard 
 {
     error PriceNotMet(uint256 tokenId, uint256 price);
     error PriceMustBeAboveZero();
@@ -20,23 +18,25 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     error AllTokkensMinted();
     error TokenNotExit();
 
-    using SafeMath for uint256;
-    using ECDSA for bytes32;
     uint tokenId;
-
-    string public baseUri;
-    bool public mintEnabled;
     uint public totalMinted;
     uint public mintSupplyCount;
+    string public baseUri;
+    bool public mintEnabled;
     
-    mapping(uint256 => Listing) public listings;
-    mapping(uint => string) public tokenMetadataHashs;
+    mapping(uint256 => Drone) public drones;
     mapping (address => bool) public whitelistAdmins;
 
-    struct Listing {
+    struct Drone {
         uint256 price;
         address seller;
         bool listedOnSale;
+        string tokenMetadataHashs;
+    }
+
+    struct returnDrone {
+        uint256 price;
+        address seller;
     }
 
     event TokenListedForSale(
@@ -91,7 +91,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     }
 
     modifier isListed(uint256 _tokenId) {
-        require (listings[_tokenId].listedOnSale ,"This Token is not listed yet");
+        require (drones[_tokenId].listedOnSale ,"This Token is not listed yet");
         _;
     }
 
@@ -120,7 +120,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         if (!_exists(_tokenId)) {
             revert TokenNotExit();
         }
-        return string(abi.encodePacked(baseUri,tokenMetadataHashs[_tokenId]));      
+        return string(abi.encodePacked(baseUri,drones[_tokenId].tokenMetadataHashs));      
     }
 
     /**
@@ -147,14 +147,13 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
      * @param _tokenMetadataHash - New Metadata
      * Emits a {UpdateMetadata} event.
      */
-
     function updateMetadataHash(
         uint _tokenId, 
         string calldata _tokenMetadataHash) 
         tokenExists(_tokenId) 
         isOwner(_tokenId, msg.sender)
         external {
-        tokenMetadataHashs[_tokenId] = _tokenMetadataHash;
+        drones[_tokenId]=Drone(drones[_tokenId].price,drones[_tokenId].seller,drones[_tokenId].listedOnSale,_tokenMetadataHash);
         emit UpdateMetadata(_tokenId,_tokenMetadataHash,msg.sender);
     }
 
@@ -200,7 +199,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
             revert NotWhitelistedAdmin();
         }
 
-        tokenMetadataHashs[_tokenId] = _tokenMetadataHash;
+        drones[_tokenId]=Drone(drones[_tokenId].price,drones[_tokenId].seller,drones[_tokenId].listedOnSale,_tokenMetadataHash);
         totalMinted++;
 
         _safeMint(msg.sender, _tokenId);
@@ -225,7 +224,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         if (_price <= 0) {
             revert PriceMustBeAboveZero();
         }        
-        listings[_tokenId] = Listing(_price, msg.sender,true);
+        drones[_tokenId] = Drone(_price,msg.sender,true,drones[_tokenId].tokenMetadataHashs);
         emit TokenListedForSale(_tokenId,msg.sender,_price);
     }
 
@@ -240,9 +239,9 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     function getTokenListing(uint256 _tokenId)
     external 
     view 
-    returns (Listing memory)
+    returns (Drone memory)
     {
-        return listings[_tokenId];
+        return drones[_tokenId];
     }
 
     /**
@@ -259,7 +258,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     isListed(_tokenId)
     isOwner(_tokenId, msg.sender)
     {
-        delete (listings[_tokenId]);
+        delete (drones[_tokenId]);
         emit CancelTokenForListing(_tokenId,msg.sender);
     }
 
@@ -277,11 +276,11 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     external
     isListed(_tokenId)      
     {
-        Listing memory listedItem = listings[_tokenId];
+        Drone memory listedItem = drones[_tokenId];
         if (msg.value < listedItem.price) {
             revert PriceNotMet(_tokenId, listedItem.price);
         }
-         delete (listings[_tokenId]);
+         delete (drones[_tokenId]);
         _safeTransfer(listedItem.seller, msg.sender, _tokenId ,"");
         emit TokenBought(_tokenId,msg.sender,listedItem.price);
     }
@@ -307,7 +306,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         if (_newPrice == 0) {
             revert PriceMustBeAboveZero();
         }        
-        listings[_tokenId].price = _newPrice;
+        drones[_tokenId].price = _newPrice;
         emit UpdatedTokenOnSale(_tokenId,msg.sender,_newPrice);
     }
 
@@ -342,18 +341,16 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         delete (whitelistAdmins[_account]);
         emit RemovedWhitelistAdmin(_account, msg.sender);
     }
-
-    //Get Total Owner Address
-
-    function GetTotalNft(address _address)
+ 
+    function getOwnedNfts() 
     public 
     view 
-    returns (uint[] memory)
-    {
-        uint[] memory tokenIds = new uint[](totalSupply());
-        for (uint256 i=0; i < totalSupply(); i++) {
-        tokenIds[i] = balanceOf(_address);
+    returns(returnDrone[] memory){
+        returnDrone[] memory items= new returnDrone[](totalSupply());
+        for (uint i=0; i<totalSupply(); i++){
+            items[i].seller=drones[i].seller;
+            items[i].price=drones[i].price;
         }
-        return tokenIds;
-    } 
+    return items;
+    }
 }
