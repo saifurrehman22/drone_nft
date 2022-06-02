@@ -8,11 +8,11 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-error PriceNotMet(uint256 tokenId, uint256 price);
-error PriceMustBeAboveZero();
-
 contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard 
 {
+    error PriceNotMet(uint256 tokenId, uint256 price);
+    error PriceMustBeAboveZero();
+
     using SafeMath for uint256;
     using ECDSA for bytes32;
     uint tokenIdCounter;
@@ -33,26 +33,22 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         bool listed;
     }
 
-    event TokenListed(
+    event TokenListedForSale(
         address  seller,
-        address  tokenAddress,
         uint256  tokenId,
         uint256 price);
 
-    event CancelTokenList(
+    event CancelTokenForListing(
         address  seller,
-        address  tokenAddress,
         uint256  tokenId);
 
     event TokenBought(
         address  buyer,
-        address  tokenAddress,
         uint256  tokenId,
         uint256 price);  
 
-    event UpdatedToken(
+    event UpdatedTokenOnSale(
         address  seller,
-        address  tokenAddress,
         uint256  tokenId,
         uint256 price);
 
@@ -193,7 +189,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
      *
      * @param _tokenId - Token Id 
      * @param _price - Price of the Token
-     * Emits a {TokenListed} event when player address is new.
+     * Emits a {TokenListedForSale} event when player address is new.
      */
 
     function listToken(
@@ -207,7 +203,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
         require(_price > 0 ,"The price must be above zero");
         listings[_tokenId] = Listing(_price, msg.sender,true);
-        emit TokenListed(msg.sender, address(this), _tokenId, _price);
+        emit TokenListedForSale(msg.sender,_tokenId, _price);
     }
 
     /**
@@ -232,7 +228,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
      * - This function can only called by owner of the token
      *
      * @param _tokenId - Token Id 
-     * Emits a {CancelTokenList} event when player address is new.
+     * Emits a {CancelTokenForListing} event when player address is new.
      */
 
     function cancelTokenListing(uint256 _tokenId) 
@@ -241,7 +237,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     {
         require(ownerOf(_tokenId) == msg.sender, "you are not owner of this token"); 
         delete (listings[_tokenId]);
-        emit CancelTokenList(msg.sender, address(this), _tokenId);
+        emit CancelTokenForListing(msg.sender,_tokenId);
     }
 
     /**
@@ -264,7 +260,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
         }
          delete (listings[_tokenId]);
         _safeTransfer(listedItem.seller, msg.sender, _tokenId ,"");
-        emit TokenBought(msg.sender, address(this), _tokenId, listedItem.price);
+        emit TokenBought(msg.sender,_tokenId, listedItem.price);
     }
 
     /**
@@ -274,7 +270,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
 
      * @param _tokenId - Token Id 
      * @param _newPrice - Price of the Token
-     * Emits a {TokenListed} event when player address is new.
+     * Emits a {UpdatedTokenOnSale} event when player address is new.
      */
 
     function updateTokenListing(
@@ -289,7 +285,7 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
             revert PriceMustBeAboveZero();
         }        
         listings[_tokenId].price = _newPrice;
-        emit UpdatedToken(msg.sender, address(this), _tokenId, _newPrice);
+        emit UpdatedTokenOnSale(msg.sender,_tokenId, _newPrice);
     }
 
     /**
