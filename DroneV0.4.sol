@@ -13,10 +13,15 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     error PriceNotMet(uint256 tokenId, uint256 price);
     error PriceMustBeAboveZero();
     error NotOwner();
+    error InvalidMetadataHash();
+    error InvalidTokenId();
+    error MintDisable();
+    error NotWhitelistedAdmin();
+    error AllTokkensMinted();
 
     using SafeMath for uint256;
     using ECDSA for bytes32;
-    uint tokenIdCounter;
+    uint tokenId;
 
     string public baseUri;
     bool public mintEnabled;
@@ -84,9 +89,8 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     _;
     }
 
-     modifier isListed(uint256 _tokenId) {
-        Listing memory listing = listings[_tokenId];
-        require (listing.listedOnSale ,"This Token is not listed yet");
+    modifier isListed(uint256 _tokenId) {
+        require (listings[_tokenId].listedOnSale ,"This Token is not listed yet");
         _;
     }
 
@@ -175,19 +179,28 @@ contract Drone is ERC721Enumerable, Ownable, ReentrancyGuard
     function mint(string memory _tokenMetadataHash) 
     external 
     nonReentrant {
-        uint256 tokenId = tokenIdCounter;
-        tokenIdCounter++;
-        require(bytes(_tokenMetadataHash).length == 46, "Invalid IPFS Hash");
-        require(tokenId >= 0 && tokenId <= mintSupplyCount, "Invalid token id.");
-        require(mintEnabled, "Minting unavailable");
-        require(totalMinted < mintSupplyCount, "All tokens minted");
-        require(bytes(_tokenMetadataHash).length > 0, "No hash or address provided");
-        require (whitelistAdmins[msg.sender], "You dont have access to whitelist" );
+        uint256 _tokenId = tokenId;
+        tokenId++;
+        if (bytes(_tokenMetadataHash).length != 46) {
+            revert InvalidMetadataHash();
+        }
+        if (_tokenId < 0 && _tokenId > mintSupplyCount) {
+            revert InvalidTokenId();
+        }
+        if (!mintEnabled) {
+            revert MintDisable();
+        }
+        if (totalMinted >= mintSupplyCount) {
+            revert AllTokkensMinted();
+        }
+        if (!whitelistAdmins[msg.sender]) {
+            revert NotWhitelistedAdmin();
+        }
 
-        tokenMetadataHashs[tokenId] = _tokenMetadataHash;
+        tokenMetadataHashs[_tokenId] = _tokenMetadataHash;
         totalMinted++;
 
-        _safeMint(msg.sender, tokenId);
+        _safeMint(msg.sender, _tokenId);
     }
 
     /**
