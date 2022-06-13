@@ -13,6 +13,8 @@ contract DroneContract is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard
     uint public mintSupplyLimit;
     bool public mintEnabled;
     string public baseUri;
+    string public contractURI;
+
 
     address[] public whitelistedAddresses;
 
@@ -21,8 +23,6 @@ contract DroneContract is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard
         address ownerAddress;
         bool listedOnSale;
         string metadataHash;
-     //   uint index;
-
     }
 
     struct ReturnDroneInfo{
@@ -30,10 +30,7 @@ contract DroneContract is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard
         string metadataHash;
     }
 
-    //address[] public adminWhitelist;  
-
     mapping(uint256 => Drones) public drones;
-    mapping (address => bool) public whitelistedAdminAddresses;
 
     error PriceNotMatched(
         uint256 droneId, 
@@ -121,13 +118,15 @@ contract DroneContract is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard
 
     constructor(
         uint _mintSupplyLimit,
-        uint96 _royaltyFeesInBips) ERC721("Drones", "TB2") {
+        uint96 _royaltyFeesInBips,
+        string memory _contractURI) ERC721("Drones", "TB2") {
 
         setRoyaltyInfo(owner(), _royaltyFeesInBips);
 
         mintSupplyLimit = _mintSupplyLimit;
         mintEnabled = true;
         baseUri = "https://gateway.pinata.cloud/ipfs/";
+        contractURI = _contractURI;
 
         emit SetBaseURI(baseUri, msg.sender);
     }
@@ -470,16 +469,17 @@ contract DroneContract is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard
      * Requirement:
      * - This function can only called by owner of the contract
 
-     * @param _account - Account to be whitelisted 
+     * @param _users - Accounts to be removed 
      * Emits a {RemovedWhitelistAdmin} event when player address is new.
      */
 
-    function removeWhitelistAdmin(address _account) 
-    external 
-    onlyOwner {
-        whitelistedAdminAddresses[_account] = false;
-        emit RemovedWhitelistAdmin(_account, msg.sender);
-    }
+    // function removeWhitelistAdmin(address _users) 
+    // external 
+    // onlyOwner {
+
+
+
+    // }
 
     /**
      * @dev getAllDrones is used to get information of all drones.
@@ -536,39 +536,6 @@ contract DroneContract is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard
         return super.supportsInterface(interfaceId);
     }
 
-    // function batchWhitelist(address[] memory _account) external {
-    //     uint size = _account.length;
-        
-    //     for(uint256 i=0; i< size; i++){
-    //         address user = _account[i];
-    //         whitelistedAdminAddresses[user] = true;
-    //         }
-    // }
-
-    // function newWhitelist(address[] memory _account) external {
-        
-    //     for(uint256 i=0; i< _account.length; i++){
-    //         address user = _account[i];
-    //         adminWhitelist.push(user);
-    //         }
-    // }  
-
-    // function getTotalNumberWhitelisted() public view returns (uint) {
-    //     return adminWhitelist.length; 
-    // } 
-
-    // mapping (address => Drones) private users;
-
-    // function deleteUser(address _userEmail) public onlyOwner returns(uint index){
-    //    // require(!isUser(_userEmail)); 
-    //     uint toDelete = users[_userEmail].index;
-    //     address lastIndex = adminWhitelist[adminWhitelist.length-1];
-    //     adminWhitelist[toDelete] = lastIndex;
-    //     users[lastIndex].index = toDelete; 
-    //     adminWhitelist.pop();
-    //     return toDelete;   
-    // }
-
     function isWhitelisted(address _user) public view returns (bool) {
     for (uint i = 0; i < whitelistedAddresses.length; i++) {
       if (whitelistedAddresses[i] == _user) {
@@ -578,52 +545,17 @@ contract DroneContract is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard
     return false;
     }
 
-    // function getDronesBoth(address _userAddress) 
-    // external  
-    // view
-    // returns(ReturnDroneInfo[] memory){
+    function setContractURI(string calldata _contractURI) 
+    public 
+    onlyOwner {
+        contractURI = _contractURI;
+    }
 
-    //     ReturnDroneInfo [] memory droneInfo = new ReturnDroneInfo[](balanceOf(_userAddress));
-
-    //     if(balanceOf(_userAddress) == 0)
-    //         return droneInfo;
-
-    //     uint256 droneIndex = 0;
-
-    //     for (uint i = 1; i <= totalSupply(); i++){
-    //         if(ownerOf(i) == _userAddress){
-    //             droneInfo[droneIndex].droneID = i;
-    //             droneInfo[droneIndex].metadataHash = string(abi.encodePacked(baseUri, drones[i].metadataHash));
-    //             droneIndex++;
-    //         }
-    //     }
-
-    //     for(uint256 i=1; i< whitelistedAddresses.length; i++){
-    //         address admin = whitelistedAddresses[i];
-             
-    //         if(isWhitelisted(admin) == true){
-    //             droneInfo[droneIndex].droneID = i;
-    //             droneInfo[droneIndex].metadataHash = string(abi.encodePacked(baseUri, drones[i].metadataHash));
-    //             droneIndex++;
-    //             }             
-    //         }
-
-    // return droneInfo;
-
-    // function getDronesBoth(address _userAddress) 
-    // external  
-    // view
-    // returns(ReturnDroneInfo[] memory){
-    //     ReturnDroneInfo [] memory droneInfo = new ReturnDroneInfo[](totalSupply());
-        
-
-    // }
-
-    function getDronesboth(address playerAddress) 
+    function getDronesboth(address playerAddress,bool isTrue) 
     external 
     view 
     returns(ReturnDroneInfo[] memory){
-
+        
         ReturnDroneInfo [] memory droneInfo = new ReturnDroneInfo[](totalSupply());
 
         if(balanceOf(playerAddress) == 0)
@@ -633,21 +565,21 @@ contract DroneContract is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard
 
         for (uint i = 1; i <= totalSupply(); i++){
             
-            // if(ownerOf(i) == playerAddress){
-            //     droneInfo[droneIndex].droneID = i;
-            //     droneInfo[droneIndex].metadataHash = string(abi.encodePacked(baseUri, drones[i].metadataHash));
-            //     droneIndex++;
-            // }
-
-            address admin = whitelistedAddresses[i];
-            if(isWhitelisted(admin) == true)
-            for(uint256 j=1; j< balanceOf(admin); j++){
-            
-                droneInfo[droneIndex].droneID = j;
-                droneInfo[droneIndex].metadataHash = string(abi.encodePacked(baseUri, drones[j].metadataHash));
+            if(ownerOf(i) == playerAddress){
+                droneInfo[droneIndex].droneID = i;
+                droneInfo[droneIndex].metadataHash = string(abi.encodePacked(baseUri, drones[i].metadataHash));
                 droneIndex++;
-                
             }
+
+            // address admin = whitelistedAddresses[i];
+            // if(isWhitelisted(admin) == true)
+            // for(uint256 j=1; j< balanceOf(admin); j++){
+            
+            //     droneInfo[droneIndex].droneID = j;
+            //     droneInfo[droneIndex].metadataHash = string(abi.encodePacked(baseUri, drones[j].metadataHash));
+            //     droneIndex++;
+                
+            // }
         }
     return droneInfo;
     }
