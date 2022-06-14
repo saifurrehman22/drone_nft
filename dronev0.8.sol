@@ -539,9 +539,9 @@ contract DroneContract is ERC721Enumerable, Ownable, ReentrancyGuard
         uint256 droneIndex = 0;
 
         if (isTrue == true){
-            for (uint i = 0; i <= whitelistedAddresses.length - 1; i++){           
+            for (uint i = 1; i <= whitelistedAddresses.length; i++){           
                 for (uint j=1; j <= totalSupply(); j++){
-                    if(ownerOf(j) == whitelistedAddresses[i]){
+                    if(ownerOf(j) == whitelistedAddresses[i-1]){
                     droneInfo[droneIndex].droneID = j;
                     droneInfo[droneIndex].metadataHash = string(abi.encodePacked(baseUri, drones[j].metadataHash));
                     droneInfo[droneIndex].isAdminDrone = true;
