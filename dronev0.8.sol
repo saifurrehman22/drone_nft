@@ -303,9 +303,9 @@ contract DroneContract is ERC721Enumerable, Ownable, ReentrancyGuard
     onlyWhitelistedAddress 
     {
         droneId++;
-        // if (bytes(_droneMetadataHash).length != 46) {
-        //     revert InvalidMetadataHash();
-        // }
+        if (bytes(_droneMetadataHash).length != 46) {
+            revert InvalidMetadataHash();
+        }
 
         if (!mintEnabled) {
             revert MintingDisabled();
@@ -434,7 +434,6 @@ contract DroneContract is ERC721Enumerable, Ownable, ReentrancyGuard
             revert PriceMustBeAboveZero();
         }        
         drones[_droneId].price = _newPrice;
-
         emit UpdatedDronePrice(_droneId, msg.sender, _newPrice);
     }
 
@@ -540,36 +539,36 @@ contract DroneContract is ERC721Enumerable, Ownable, ReentrancyGuard
         uint256 droneIndex = 0;
 
         if (isTrue == true){
-            for (uint i = 1; i <= whitelistedAddresses.length ; i++){           
-            // address admin = whitelistedAddresses[i];
-
+            for (uint i = 0; i <= whitelistedAddresses.length - 1; i++){           
                 for (uint j=1; j <= totalSupply(); j++){
-                    if(ownerOf(j) == whitelistedAddresses[i-1]){                       
+                    if(ownerOf(j) == whitelistedAddresses[i]){
                     droneInfo[droneIndex].droneID = j;
                     droneInfo[droneIndex].metadataHash = string(abi.encodePacked(baseUri, drones[j].metadataHash));
                     droneInfo[droneIndex].isAdminDrone = true;
                     droneIndex++;
                     }
-                    if(ownerOf(j) == playerAddress){
-                    droneInfo[droneIndex].droneID = j;
-                    droneInfo[droneIndex].metadataHash = string(abi.encodePacked(baseUri, drones[j].metadataHash));
+                }
+            }
+            for (uint i = 1; i <= totalSupply(); i++){
+                if(ownerOf(i) == playerAddress){
+                    droneInfo[droneIndex].droneID = i;
+                    droneInfo[droneIndex].metadataHash = string(abi.encodePacked(baseUri, drones[i].metadataHash));
                     droneInfo[droneIndex].isAdminDrone = false;
                     droneIndex++;
-                    }
                 }
             }
         }
         else {
             for (uint i = 1; i <= totalSupply(); i++){
-            if(ownerOf(i) == playerAddress){
-                droneInfo[droneIndex].droneID = i;
-                droneInfo[droneIndex].metadataHash = string(abi.encodePacked(baseUri, drones[i].metadataHash));
-                droneInfo[droneIndex].isAdminDrone = false;
-                droneIndex++;
+                if(ownerOf(i) == playerAddress){
+                    droneInfo[droneIndex].droneID = i;
+                    droneInfo[droneIndex].metadataHash = string(abi.encodePacked(baseUri, drones[i].metadataHash));
+                    droneInfo[droneIndex].isAdminDrone = false;
+                    droneIndex++;
                 }   
             }
         }
         return droneInfo;
-    }
 
+    }
 }
