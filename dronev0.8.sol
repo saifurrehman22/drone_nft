@@ -469,11 +469,7 @@ contract DroneContract is ERC721Enumerable, Ownable, ReentrancyGuard
     function removeWhitelistAdmin(address _user) 
     external 
     onlyOwner {
-        uint256 index = uint256(uint160(address(_user)));
-        for(uint i = index; i < whitelistedAddresses.length-1; i++){
-        whitelistedAddresses[i] = whitelistedAddresses[i+1];      
-        whitelistedAddresses.pop();
-        }
+        
     }
 
     /**
